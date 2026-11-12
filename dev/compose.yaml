@@ -9,8 +9,10 @@
 # The project's name when the file is run on its own. An including file's own name wins.
 name: chat-dev
 
+# The services and volumes that are not named for what they run are named for the chat, since an
+# including project has a database and volumes of its own.
 services:
-    postgres:
+    chat-db:
         image: postgres:18.6
         environment:
             POSTGRES_USER: chat
@@ -18,7 +20,7 @@ services:
         volumes:
             - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
             # Postgres 18 keeps its data in a subdirectory of this mount, see its image notes.
-            - postgres-data:/var/lib/postgresql
+            - chat-db-data:/var/lib/postgresql
         healthcheck:
             test: [CMD-SHELL, "pg_isready -U chat -d mas"]
             interval: 2s
@@ -27,7 +29,7 @@ services:
 
     # Makes Synapse's signing key and MAS's keys on the first start, and nothing after it. It runs
     # as root to write to the volumes, so it hands Synapse's over to the user Synapse runs as.
-    keys:
+    chat-keys:
         image: ghcr.io/element-hq/synapse:v1.165.0
         entrypoint: [sh, -c]
         command:
@@ -47,9 +49,9 @@ services:
     synapse:
         image: ghcr.io/element-hq/synapse:v1.165.0
         depends_on:
-            postgres:
+            chat-db:
                 condition: service_healthy
-            keys:
+            chat-keys:
                 condition: service_completed_successfully
         environment:
             SYNAPSE_CONFIG_PATH: /config/homeserver.yaml
@@ -70,9 +72,9 @@ services:
     mas:
         image: ghcr.io/element-hq/matrix-authentication-service:1.29.0
         depends_on:
-            postgres:
+            chat-db:
                 condition: service_healthy
-            keys:
+            chat-keys:
                 condition: service_completed_successfully
         command: [server, --config, /config/config.yaml]
         # The provider MAS signs users in through is the application, published on the machine's
@@ -95,6 +97,6 @@ services:
             - ./element/config.json:/app/config.json:ro
 
 volumes:
-    postgres-data:
+    chat-db-data:
     synapse-data:
     mas-secrets:

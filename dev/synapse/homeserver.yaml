@@ -17,7 +17,7 @@ listeners:
 database:
     name: psycopg2
     args:
-        host: postgres
+        host: chat-db
         user: chat
         password: chat
         dbname: synapse

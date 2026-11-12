@@ -28,6 +28,8 @@ admins in the client. Direct messages and group rooms are anyone's to make.
 
 - **Signing in.** MAS takes no password and registers no one. It signs users in through the
   application, which is an OpenID Connect provider, and makes the account at the first sign in.
+  The application says in the token what the user is called on the homeserver, as the claim
+  `chat_localpart`, and their name. MAS is not told their email.
 - **The application service.** Synapse knows the application from a registration file, see
   `dev/synapse/appservice.yaml`. With its token the application acts as its bot, and as any user
   of the homeserver. So it creates a space as the bot, invites a user to it and joins as that user,

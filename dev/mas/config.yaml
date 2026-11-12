@@ -20,7 +20,7 @@ http:
               - address: "[::]:8080"
 
 database:
-    uri: postgresql://chat:chat@postgres/mas
+    uri: postgresql://chat:chat@chat-db/mas
 
 matrix:
     kind: synapse
@@ -39,6 +39,35 @@ email:
 # No one has a password here. Everyone signs in through the application.
 passwords:
     enabled: false
+
+# The application as the one provider MAS signs users in through: an OpenID Connect provider on its
+# auth domain, where MAS is a client named by its own host, with PKCE and no secret. The first sign
+# in makes the account, by the claims the application sends: the user's name, and
+# `chat_localpart`, which is what the application has decided the user is called on the homeserver,
+# so MAS never names a user itself.
+upstream_oauth2:
+    providers:
+        - id: 000000000000000000000VEVEN
+          human_name: Omegaweb
+          issuer: http://auth.localhost:3000
+          # MAS takes an https issuer alone, and the application's is plain http in development.
+          # This leaves out the checks of what the issuer publishes about itself.
+          discovery_mode: insecure
+          client_id: account.chat.localhost
+          token_endpoint_auth_method: none
+          pkce_method: always
+          id_token_signed_response_alg: ES256
+          scope: openid profile chat
+          claims_imports:
+              localpart:
+                  action: require
+                  template: "{{ user.chat_localpart }}"
+              displayname:
+                  action: force
+                  template: "{{ user.name }}"
+              # The homeserver has no use for where a user is reached, so it is not told.
+              email:
+                  action: ignore
 
 # The account is what it is in the application, so nothing about it is changed here.
 account:

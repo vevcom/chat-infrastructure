@@ -16,15 +16,19 @@ docker compose up -d
 Browsers resolve every name under `localhost` to the machine itself. The server name is
 `chat.localhost`, so a user is `@<username>:chat.localhost`.
 
-Nobody can sign in yet: MAS takes no password, and the provider it is to sign users in through,
-omegaweb-next, is not set up in `mas/config.yaml`. `check.sh` makes its users through MAS's admin
-api and acts as them through the application service.
+Signing in goes through omegaweb-next, which is an OpenID Connect provider on
+`http://auth.localhost:3000` when it runs with the `sites.json` of its example. The client sends
+you to MAS, MAS sends you there, and you come back as `@<username>:chat.localhost`. The first time,
+MAS shows the Matrix id and the name the account gets and asks you to confirm. MAS reaches the
+provider through `auth.localhost`, which the compose file points at the machine. Without
+omegaweb-next running nobody signs in; `check.sh` makes its users through MAS's admin api and acts
+as them through the application service.
 
 ## What is fixed and what is made
 
 The values that are secrets in production are fixed here, in the config files: the tokens of the
 application service, the secret Synapse and MAS share, and the secret of the application as a
-client of MAS's admin api. The keys are not. The `keys` service makes Synapse's signing key and
+client of MAS's admin api. The keys are not. The `chat-keys` service makes Synapse's signing key and
 MAS's keys on the first start and keeps them on volumes, so a restart keeps every session.
 `docker compose down -v` clears the keys with everything else.
 
@@ -34,9 +38,11 @@ MAS's keys on the first start and keeps them on volumes, so a restart keeps ever
   `synapse/appservice.yaml`.
 - To MAS's admin api at `http://mas:8080`, as the client in `mas/config.yaml`, with the
   `client_credentials` grant and the scope `urn:mas:admin`.
+- As the provider MAS signs users in through, see `upstream_oauth2` in `mas/config.yaml`. MAS is a
+  client named by its host, `account.chat.localhost`, with PKCE and no secret, and takes the code
+  back at `/upstream/callback/<the provider's id in the config>`. It asks for the scopes `openid`,
+  `profile` and `chat`, and makes the account by the claims `chat_localpart` and `name`.
 
-MAS reaches the application's provider through `auth.localhost`, which the compose file points at
-the machine.
 
 ## On an Apple M4
 
