@@ -1,0 +1,38 @@
+name: validate
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
+    - name: install kubeconform
+      run: |
+        curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz kubeconform
+    # The database is CloudNativePG's kinds, which kubeconform has no schema for.
+    - name: validate
+      run: kustomize build deploy/base | ./kubeconform -strict -summary -ignore-missing-schemas
+
+  # The development stack runs on the config of deploy/base, so this is production's config
+  # started and held against what the README says of it.
+  dev:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
+    - name: start
+      working-directory: dev
+      run: docker compose up -d
+    - name: check
+      working-directory: dev
+      run: ./check.sh
+    - name: logs
+      if: failure()
+      working-directory: dev
+      run: docker compose logs --no-color --tail 200

@@ -1,0 +1,60 @@
+# Synapse, as far as it is the same for every installation. An installation adds a file of its own
+# beside this one, site.yaml, with its server name, its address and who creates spaces. Development's is dev/synapse/site.yaml. No secret is in either: Synapse reads each from a
+# file under /secrets, and the database's password from PGPASSWORD.
+report_stats: false
+
+# The database of database.yaml, by the name CloudNativePG gives the service that writes to it.
+database:
+    name: psycopg2
+    args:
+        host: chat-db-rw
+        user: chat
+        dbname: synapse
+        cp_min: 2
+        cp_max: 10
+
+listeners:
+    - port: 8008
+      type: http
+      bind_addresses: ["0.0.0.0"]
+      x_forwarded: true
+      resources:
+          - names: [client]
+
+media_store_path: /data/media_store
+# Made before the first start, by the container that renders the registration, and kept on the volume.
+signing_key_path: /data/signing.key
+macaroon_secret_key_path: /secrets/synapse-macaroon
+form_secret_path: /secrets/synapse-form
+
+# No other homeserver is talked to: the members of every space are decided in the application,
+# which knows the users of this server alone.
+federation_domain_whitelist: []
+trusted_key_servers: []
+
+# MAS signs everyone in, so Synapse takes no password and registers no one itself.
+matrix_authentication_service:
+    enabled: true
+    endpoint: http://mas:8080/
+    secret_path: /secrets/mas-shared
+password_config:
+    enabled: false
+enable_registration: false
+
+# A user's name, picture and email are the ones they have in the application, which sets them.
+enable_set_displayname: false
+enable_set_avatar_url: false
+enable_3pid_changes: false
+
+# No room is encrypted. Synapse turns it on for none, the module refuses it, see
+# omegaweb_rules.py, and a client is told so in the well-known file Synapse serves, so it does not
+# offer it.
+encryption_enabled_by_default_for_room_type: "off"
+extra_well_known_client_content:
+    io.element.e2ee:
+        default: false
+        force_disable: true
+
+# The application, which acts on the homeserver as its bot and as the users, see appservice.yaml.
+app_service_config_files:
+    - /registration/appservice.yaml

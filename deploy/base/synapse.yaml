@@ -1,0 +1,146 @@
+# One Synapse, with the media and its signing key on a volume. Its config is homeserver.yaml and
+# the overlay's site.yaml. Its secrets come from the chat-env secret, which the overlay provides,
+# as files under /secrets, and the database's password from the secret CloudNativePG makes.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: synapse
+spec:
+    serviceName: synapse
+    replicas: 1
+    selector:
+        matchLabels:
+            app.kubernetes.io/name: synapse
+    template:
+        metadata:
+            labels:
+                app.kubernetes.io/name: synapse
+        spec:
+            # The user the image runs Synapse as, which the volume has to be writable by.
+            securityContext:
+                runAsUser: 991
+                runAsGroup: 991
+                fsGroup: 991
+            volumes:
+                - name: config
+                  configMap:
+                      name: synapse-config
+                - name: site
+                  configMap:
+                      name: synapse-site
+                - name: secrets
+                  secret:
+                      secretName: chat-env
+                      items:
+                          - key: SYNAPSE_MACAROON_SECRET
+                            path: synapse-macaroon
+                          - key: SYNAPSE_FORM_SECRET
+                            path: synapse-form
+                          - key: MAS_SHARED_SECRET
+                            path: mas-shared
+                # The application service registration, rendered by the init container.
+                - name: registration
+                  emptyDir: {}
+            initContainers:
+                # Synapse reads the registration once, when it starts, so it is rendered first:
+                # the template with the application's two tokens, the server name and where the
+                # application takes events. Then the signing key is made, the first time.
+                - name: prepare
+                  image: ghcr.io/element-hq/synapse:v1.165.0
+                  command: [sh, -c]
+                  args:
+                      - python /config/render_registration.py
+                        && python -m synapse.app.homeserver
+                        --config-path /config/homeserver.yaml --config-path /site/site.yaml --generate-keys
+                  env:
+                      - name: PYTHONPATH
+                        value: /config
+                      - name: CHAT_AS_TOKEN
+                        valueFrom:
+                            secretKeyRef:
+                                name: chat-env
+                                key: CHAT_AS_TOKEN
+                      - name: CHAT_HS_TOKEN
+                        valueFrom:
+                            secretKeyRef:
+                                name: chat-env
+                                key: CHAT_HS_TOKEN
+                  envFrom:
+                      - configMapRef:
+                            name: synapse-registration
+                  volumeMounts: &synapse-mounts
+                      - name: config
+                        mountPath: /config
+                        readOnly: true
+                      - name: site
+                        mountPath: /site
+                        readOnly: true
+                      - name: secrets
+                        mountPath: /secrets
+                        readOnly: true
+                      - name: registration
+                        mountPath: /registration
+                      - name: data
+                        mountPath: /data
+            containers:
+                - name: synapse
+                  image: ghcr.io/element-hq/synapse:v1.165.0
+                  args: [run, --config-path, /config/homeserver.yaml, --config-path, /site/site.yaml]
+                  env:
+                      # Where Synapse finds the module site.yaml names.
+                      - name: PYTHONPATH
+                        value: /config
+                      - name: PGPASSWORD
+                        valueFrom:
+                            secretKeyRef:
+                                name: chat-db-app
+                                key: password
+                  ports:
+                      - name: http
+                        containerPort: 8008
+                  volumeMounts: *synapse-mounts
+                  startupProbe:
+                      httpGet:
+                          path: /health
+                          port: http
+                      periodSeconds: 5
+                      failureThreshold: 60
+                  readinessProbe:
+                      httpGet:
+                          path: /health
+                          port: http
+                      periodSeconds: 10
+                  livenessProbe:
+                      httpGet:
+                          path: /health
+                          port: http
+                      periodSeconds: 20
+                      failureThreshold: 3
+                  resources:
+                      requests:
+                          cpu: 100m
+                          memory: 512Mi
+                      limits:
+                          memory: 2Gi
+    volumeClaimTemplates:
+        - metadata:
+              name: data
+          spec:
+              accessModes: [ReadWriteOnce]
+              resources:
+                  requests:
+                      storage: 20Gi
+---
+# Inside the cluster. Everything Synapse serves is here: what clients use, which the ingress
+# publishes, and its admin api and the api MAS calls, which the ingress does not.
+apiVersion: v1
+kind: Service
+metadata:
+    name: synapse
+spec:
+    selector:
+        app.kubernetes.io/name: synapse
+    ports:
+        - name: http
+          port: 8008
+          targetPort: http

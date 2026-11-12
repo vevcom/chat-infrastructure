@@ -1,0 +1,68 @@
+# The hosts are set per overlay. The client's host is also the server name, so the well-known
+# file clients find the homeserver by is asked for there, and Synapse answers it. Of what Synapse
+# serves, only what clients use is published: its admin api and the api MAS calls are not.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: element
+spec:
+    rules:
+        - host: chat.placeholder.invalid
+          http:
+              paths:
+                  - path: /.well-known/matrix
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: synapse
+                            port:
+                                name: http
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: element
+                            port:
+                                name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: synapse
+spec:
+    rules:
+        - host: matrix.placeholder.invalid
+          http:
+              paths:
+                  - path: /_matrix
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: synapse
+                            port:
+                                name: http
+                  - path: /_synapse/client
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: synapse
+                            port:
+                                name: http
+---
+# The port browsers reach alone. The admin api is on the service's other port.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: mas
+spec:
+    rules:
+        - host: account.placeholder.invalid
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: mas
+                            port:
+                                name: http

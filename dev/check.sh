@@ -5,8 +5,11 @@
 # behind; `docker compose down -v` clears them.
 set -euo pipefail
 
-HS=http://matrix.chat.localhost:8008
-MAS=http://account.chat.localhost:8091
+HS=${HS:-http://matrix.chat.localhost:8008}
+MAS=${MAS:-http://account.chat.localhost:8091}
+# MAS's admin api is on a port of its own, which development publishes here.
+MAS_ADMIN=${MAS_ADMIN:-http://localhost:8092}
+CLIENT=${CLIENT:-http://chat.localhost:8090}
 AS_TOKEN=omegaweb-dev-as-token
 SERVER=chat.localhost
 failed=0
@@ -28,7 +31,7 @@ for _ in $(seq 1 60); do curl -sf "$HS/health" >/dev/null && curl -sf "$MAS/heal
 # The application's two ways in: the application service token above, and MAS's admin api.
 admin=$(curl -s -u 0000000000000000000MEGAWEB:omegaweb-dev-mas-client-secret \
     -d 'grant_type=client_credentials&scope=urn:mas:admin' "$MAS/oauth2/token" | jq -r .access_token)
-mas() { curl -s -X "$1" -H "Authorization: Bearer $admin" -H "Content-Type: application/json" ${3:+-d "$3"} "$MAS$2"; }
+mas() { curl -s -X "$1" -H "Authorization: Bearer $admin" -H "Content-Type: application/json" ${3:+-d "$3"} "$MAS_ADMIN$2"; }
 
 bot="@omegaweb:$SERVER"
 matrix POST /_matrix/client/v3/register '{"type":"m.login.application_service","username":"omegaweb","inhibit_login":true}' >/dev/null
@@ -81,8 +84,13 @@ check "the application sets a user's name" "Kari Nordmann" \
     "$(curl -s -X PUT -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d '{"displayname":"Kari Nordmann"}' \
         "$HS/_synapse/admin/v2/users/$(enc "$kari")" | jq -r .displayname)"
 
+check "MAS's admin api is not on the port browsers reach" 404 \
+    "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $admin" "$MAS/api/admin/v1/users")"
+check "clients are told that no room is encrypted" true \
+    "$(curl -s "$HS/.well-known/matrix/client" | jq '.["io.element.e2ee"].force_disable')"
+
 check "the client is served, set up for this homeserver" "$SERVER" \
-    "$(curl -s http://chat.localhost:8090/config.json | jq -r '.default_server_config["m.homeserver"].server_name')"
+    "$(curl -s "$CLIENT/config.json" | jq -r '.default_server_config["m.homeserver"].server_name')"
 check "and may register itself with MAS" true \
     "$(curl -s -H "Content-Type: application/json" -d '{"client_name":"check","client_uri":"http://chat.localhost:8090/",
         "redirect_uris":["http://chat.localhost:8090/"],"grant_types":["authorization_code","refresh_token"],"response_types":["code"],

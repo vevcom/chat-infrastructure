@@ -1,0 +1,63 @@
+# The client: Element Web, which is static files and the config.json that says which homeserver
+# it is for.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: element
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app.kubernetes.io/name: element
+    template:
+        metadata:
+            labels:
+                app.kubernetes.io/name: element
+        spec:
+            volumes:
+                - name: config
+                  configMap:
+                      name: element-config
+            containers:
+                - name: element
+                  image: ghcr.io/element-hq/element-web:v1.12.35
+                  env:
+                      - name: ELEMENT_WEB_PORT
+                        value: "8080"
+                  ports:
+                      - name: http
+                        containerPort: 8080
+                  volumeMounts:
+                      - name: config
+                        mountPath: /app/config.json
+                        subPath: config.json
+                        readOnly: true
+                  readinessProbe:
+                      httpGet:
+                          path: /config.json
+                          port: http
+                      periodSeconds: 10
+                  livenessProbe:
+                      httpGet:
+                          path: /config.json
+                          port: http
+                      periodSeconds: 20
+                      failureThreshold: 3
+                  resources:
+                      requests:
+                          cpu: 20m
+                          memory: 32Mi
+                      limits:
+                          memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: element
+spec:
+    selector:
+        app.kubernetes.io/name: element
+    ports:
+        - name: http
+          port: 80
+          targetPort: http

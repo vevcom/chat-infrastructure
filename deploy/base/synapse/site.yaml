@@ -1,0 +1,13 @@
+# What an installation says of its own Synapse, beside homeserver.yaml. An overlay replaces this
+# file with its own, see README.md.
+
+# The part after the colon in every user id and room id. It can never change.
+server_name: chat.placeholder.invalid
+# Where clients reach Synapse.
+public_baseurl: https://matrix.placeholder.invalid/
+
+# Only the application's bot creates spaces, and no room is encrypted, see omegaweb_rules.py.
+modules:
+    - module: omegaweb_rules.OmegawebRules
+      config:
+          space_creator: "@omegaweb:chat.placeholder.invalid"

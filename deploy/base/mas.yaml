@@ -1,0 +1,104 @@
+# MAS, which signs users in to Synapse through the application. Its config is config.yaml and the
+# overlay's site.yaml. Its secrets come from the chat-env secret, which the overlay provides, and
+# the database's password from the secret CloudNativePG makes, all as files under /secrets. It
+# migrates its own database when it starts.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: mas
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app.kubernetes.io/name: mas
+    template:
+        metadata:
+            labels:
+                app.kubernetes.io/name: mas
+        spec:
+            volumes:
+                - name: config
+                  configMap:
+                      name: mas-config
+                - name: site
+                  configMap:
+                      name: mas-site
+                - name: secrets
+                  projected:
+                      sources:
+                          - secret:
+                                name: chat-env
+                                items:
+                                    - key: MAS_SHARED_SECRET
+                                      path: mas-shared
+                                    - key: MAS_ENCRYPTION_SECRET
+                                      path: mas-encryption
+                                    - key: MAS_SIGNING_KEY
+                                      path: mas-keys/rsa.pem
+                                    - key: CHAT_MAS_CLIENT_SECRET
+                                      path: mas-client-secret
+                          - secret:
+                                name: chat-db-app
+                                items:
+                                    - key: password
+                                      path: db-password
+            containers:
+                - name: mas
+                  image: ghcr.io/element-hq/matrix-authentication-service:1.29.0
+                  args: [server, --config, /config/config.yaml, --config, /site/site.yaml]
+                  ports:
+                      - name: http
+                        containerPort: 8080
+                      - name: internal
+                        containerPort: 8081
+                  volumeMounts:
+                      - name: config
+                        mountPath: /config
+                        readOnly: true
+                      - name: site
+                        mountPath: /site
+                        readOnly: true
+                      - name: secrets
+                        mountPath: /secrets
+                        readOnly: true
+                  startupProbe:
+                      httpGet:
+                          path: /health
+                          port: internal
+                      periodSeconds: 5
+                      failureThreshold: 24
+                  readinessProbe:
+                      httpGet:
+                          path: /health
+                          port: internal
+                      periodSeconds: 10
+                  livenessProbe:
+                      httpGet:
+                          path: /health
+                          port: internal
+                      periodSeconds: 20
+                      failureThreshold: 3
+                  resources:
+                      requests:
+                          cpu: 50m
+                          memory: 128Mi
+                      limits:
+                          memory: 512Mi
+---
+# Inside the cluster. `http` is what browsers reach through the ingress and what Synapse asks
+# about tokens. `internal` is the admin api, for the application alone: the ingress does not
+# publish it, and the overlay says who may reach it.
+apiVersion: v1
+kind: Service
+metadata:
+    name: mas
+spec:
+    selector:
+        app.kubernetes.io/name: mas
+    ports:
+        - name: http
+          port: 8080
+          targetPort: http
+        - name: internal
+          port: 8081
+          targetPort: internal

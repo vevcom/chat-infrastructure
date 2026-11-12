@@ -1,0 +1,47 @@
+# Synapse, MAS and Element Web, in the shape of one installation: nothing here names a domain, a
+# certificate or a secret. An overlay includes this directory and fills those in, see README.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+    - pairs:
+          app.kubernetes.io/part-of: chat
+
+resources:
+    - database.yaml
+    - synapse.yaml
+    - mas.yaml
+    - element.yaml
+    - ingress.yaml
+
+configMapGenerator:
+    # Synapse as it is for every installation, with the module and what renders the application
+    # service registration. The dev half mounts the same directory.
+    - name: synapse-config
+      files:
+          - synapse/homeserver.yaml
+          - synapse/appservice.yaml
+          - synapse/render_registration.py
+          - synapse/omegaweb_rules.py
+    # The installation's own of Synapse's config, which the overlay replaces.
+    - name: synapse-site
+      files:
+          - site.yaml=synapse/site.yaml
+    # What the registration is rendered with, beside the two tokens from chat-env: the server name,
+    # and where the application takes events, which is empty until it does.
+    - name: synapse-registration
+      literals:
+          - CHAT_SERVER_NAME=chat.placeholder.invalid
+          - CHAT_APPSERVICE_URL=
+    # MAS as it is for every installation. The dev half mounts the same directory.
+    - name: mas-config
+      files:
+          - mas/config.yaml
+    # The installation's own of MAS's config, which the overlay replaces.
+    - name: mas-site
+      files:
+          - site.yaml=mas/site.yaml
+    # Which homeserver the client is for, which the overlay replaces.
+    - name: element-config
+      files:
+          - element/config.json

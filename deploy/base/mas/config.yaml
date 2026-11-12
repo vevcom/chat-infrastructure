@@ -1,0 +1,59 @@
+# MAS, the service that signs users in to Synapse, as far as it is the same for every installation.
+# An installation adds a file of its own beside this one, site.yaml, with its address, the server name, the application as a client, and the provider it signs users in
+# through. Development's is dev/mas/site.yaml. No secret is in either: MAS reads each from a file
+# under /secrets.
+
+http:
+    listeners:
+        # What browsers and Synapse reach.
+        - name: web
+          resources:
+              - name: discovery
+              - name: human
+              - name: oauth
+              - name: compat
+              - name: graphql
+              - name: assets
+          binds:
+              - address: "[::]:8080"
+        # The admin api, which the application deactivates accounts through and gets its admin
+        # access to Synapse from. It is on a port of its own, which is never published.
+        - name: internal
+          resources:
+              - name: adminapi
+              - name: health
+          binds:
+              - address: "[::]:8081"
+
+# The database of database.yaml, by the name CloudNativePG gives the service that writes to it.
+database:
+    host: chat-db-rw
+    username: chat
+    password_file: /secrets/db-password
+    database: mas
+
+matrix:
+    kind: synapse
+    endpoint: http://synapse:8008/
+    secret_file: /secrets/mas-shared
+
+secrets:
+    encryption_file: /secrets/mas-encryption
+    keys_dir: /secrets/mas-keys
+
+# MAS sends no mail: it knows no password to recover and verifies no address.
+email:
+    transport: blackhole
+
+# No one has a password here. Everyone signs in through the application.
+passwords:
+    enabled: false
+
+# The account is what it is in the application, so nothing about it is changed here.
+account:
+    email_change_allowed: false
+    displayname_change_allowed: false
+    password_change_allowed: false
+    password_registration_enabled: false
+    password_recovery_enabled: false
+    account_deactivation_allowed: false

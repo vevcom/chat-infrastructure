@@ -1,0 +1,21 @@
+# The application as an application service: the registration that tells Synapse it exists. It is
+# a template: render_registration.py fills in the values in braces before Synapse starts.
+#
+# `as_token` is what the application calls Synapse with. A call is made as the bot, @omegaweb on
+# this server, or as any user the namespace covers when it names one in `user_id`. The namespace
+# covers every user of this server, so the application can put a user in a space and take them out
+# without an invite to accept. It is not exclusive: the users are created by MAS.
+#
+# `url` is where Synapse sends every event, signed with `hs_token`. With `null` it sends none.
+id: omegaweb
+url: ${CHAT_APPSERVICE_URL}
+as_token: ${CHAT_AS_TOKEN}
+hs_token: ${CHAT_HS_TOKEN}
+sender_localpart: omegaweb
+rate_limited: false
+namespaces:
+    users:
+        - exclusive: false
+          regex: "@.*:${CHAT_SERVER_NAME_REGEX}"
+    aliases: []
+    rooms: []

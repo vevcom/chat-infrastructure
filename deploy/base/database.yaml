@@ -1,0 +1,33 @@
+# One Postgres for Synapse and MAS, with a database each. CloudNativePG creates the chat-db-app
+# secret, whose `password` key both read, and the chat-db-rw service the configs name. Synapse
+# refuses a database that does not collate as C, so the whole cluster does.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+    name: chat-db
+    annotations:
+        argocd.argoproj.io/sync-wave: "-3"
+spec:
+    instances: 1
+    imageName: ghcr.io/cloudnative-pg/postgresql:18.6-system-trixie
+    bootstrap:
+        initdb:
+            database: synapse
+            owner: chat
+            encoding: UTF8
+            localeCollate: C
+            localeCType: C
+    storage:
+        size: 10Gi
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+    name: chat-db-mas
+    annotations:
+        argocd.argoproj.io/sync-wave: "-2"
+spec:
+    cluster:
+        name: chat-db
+    name: mas
+    owner: chat

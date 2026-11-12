@@ -1,6 +1,7 @@
 # The chat for development: Synapse, the homeserver, MAS, which signs users in to it, and the
-# Element Web client, on plain http. An application's compose file includes this file, see the
-# README at the root of the repo. On its own, from this directory:
+# Element Web client, on plain http. They run on the config of deploy/base, which is production's,
+# with this directory's site files beside it. An application's compose file includes this file, see
+# the README at the root of the repo. On its own, from this directory:
 #
 #     docker compose up -d
 #
@@ -21,30 +22,48 @@ services:
             - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
             # Postgres 18 keeps its data in a subdirectory of this mount, see its image notes.
             - chat-db-data:/var/lib/postgresql
+        # The name production's database service has, which the config of deploy/base names.
+        networks:
+            default:
+                aliases: [chat-db-rw]
         healthcheck:
             test: [CMD-SHELL, "pg_isready -U chat -d mas"]
             interval: 2s
             timeout: 2s
             retries: 30
 
-    # Makes Synapse's signing key and MAS's keys on the first start, and nothing after it. It runs
-    # as root to write to the volumes, so it hands Synapse's over to the user Synapse runs as.
+    # What production's pods are given or do before Synapse and MAS start: the secrets as files,
+    # the application service registration from its template, and Synapse's signing key. It runs as
+    # root to write to the volumes, so it hands Synapse's over to the user Synapse runs as.
     chat-keys:
         image: ghcr.io/element-hq/synapse:v1.165.0
         entrypoint: [sh, -c]
         command:
-            - python -m synapse.app.homeserver --config-path /config/homeserver.yaml --generate-keys
+            - python /prepare.py
+              && python /config/render_registration.py
+              && python -m synapse.app.homeserver -c /config/homeserver.yaml -c /site/site.yaml --generate-keys
               && chown -R 991:991 /data
-              && python /mas/make_keys.py
         environment:
-            PYTHONPATH: /modules
+            PYTHONPATH: /config
             OPENSSL_armcap: "0"
+            # The values that are secrets in production, fixed here since nothing outside the
+            # machine reaches this stack. PGPASSWORD is the database's, as chat-db has it.
+            SYNAPSE_MACAROON_SECRET: omegaweb-dev-macaroon
+            SYNAPSE_FORM_SECRET: omegaweb-dev-form
+            MAS_SHARED_SECRET: omegaweb-dev-mas-shared-secret
+            CHAT_MAS_CLIENT_SECRET: omegaweb-dev-mas-client-secret
+            PGPASSWORD: chat
+            # What the registration is rendered with, see deploy/base/synapse/appservice.yaml.
+            CHAT_AS_TOKEN: omegaweb-dev-as-token
+            CHAT_HS_TOKEN: omegaweb-dev-hs-token
+            CHAT_SERVER_NAME: chat.localhost
         volumes:
-            - ./synapse:/config:ro
-            - ../synapse:/modules:ro
-            - ./mas/make_keys.py:/mas/make_keys.py:ro
+            - ../deploy/base/synapse:/config:ro
+            - ./synapse:/site:ro
+            - ./prepare.py:/prepare.py:ro
             - synapse-data:/data
-            - mas-secrets:/secrets
+            - chat-secrets:/secrets
+            - chat-registration:/registration
 
     synapse:
         image: ghcr.io/element-hq/synapse:v1.165.0
@@ -53,10 +72,11 @@ services:
                 condition: service_healthy
             chat-keys:
                 condition: service_completed_successfully
+        command: [run, --config-path, /config/homeserver.yaml, --config-path, /site/site.yaml]
         environment:
-            SYNAPSE_CONFIG_PATH: /config/homeserver.yaml
-            # Where Synapse finds the module homeserver.yaml names.
-            PYTHONPATH: /modules
+            # Where Synapse finds the module site.yaml names.
+            PYTHONPATH: /config
+            PGPASSWORD: chat
             # OpenSSL in this image crashes with "Illegal instruction" on an Apple M4 under an old
             # Docker Desktop, see README.md. This stops it from probing what the processor can do,
             # and does nothing on a processor that is not ARM.
@@ -65,9 +85,11 @@ services:
             # Opened by the client in the browser, as http://matrix.chat.localhost:8008.
             - "127.0.0.1:8008:8008"
         volumes:
-            - ./synapse:/config:ro
-            - ../synapse:/modules:ro
+            - ../deploy/base/synapse:/config:ro
+            - ./synapse:/site:ro
             - synapse-data:/data
+            - chat-secrets:/secrets:ro
+            - chat-registration:/registration:ro
 
     mas:
         image: ghcr.io/element-hq/matrix-authentication-service:1.29.0
@@ -76,17 +98,20 @@ services:
                 condition: service_healthy
             chat-keys:
                 condition: service_completed_successfully
-        command: [server, --config, /config/config.yaml]
+        command: [server, --config, /config/config.yaml, --config, /site/site.yaml]
         # The provider MAS signs users in through is the application, published on the machine's
         # port 3000, see README.md.
         extra_hosts:
             - auth.localhost:host-gateway
         ports:
-            # Opened as http://account.chat.localhost:8091, the address in config.yaml.
+            # Opened as http://account.chat.localhost:8091, the address in site.yaml.
             - "127.0.0.1:8091:8080"
+            # The admin api, which production never publishes. Here it is, for check.sh.
+            - "127.0.0.1:8092:8081"
         volumes:
-            - ./mas/config.yaml:/config/config.yaml:ro
-            - mas-secrets:/secrets:ro
+            - ../deploy/base/mas:/config:ro
+            - ./mas:/site:ro
+            - chat-secrets:/secrets:ro
 
     element:
         image: ghcr.io/element-hq/element-web:v1.12.35
@@ -99,4 +124,5 @@ services:
 volumes:
     chat-db-data:
     synapse-data:
-    mas-secrets:
+    chat-secrets:
+    chat-registration:
