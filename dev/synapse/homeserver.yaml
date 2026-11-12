@@ -1,0 +1,61 @@
+# Synapse for development. The values here that are secrets anywhere else are fixed, since nothing
+# outside the machine reaches this server.
+
+# The part after the colon in every user id and room id. It can never change, see the root README.
+server_name: chat.localhost
+public_baseurl: http://matrix.chat.localhost:8008/
+report_stats: false
+
+listeners:
+    - port: 8008
+      type: http
+      bind_addresses: ["0.0.0.0"]
+      x_forwarded: true
+      resources:
+          - names: [client]
+
+database:
+    name: psycopg2
+    args:
+        host: postgres
+        user: chat
+        password: chat
+        dbname: synapse
+        cp_min: 2
+        cp_max: 10
+
+media_store_path: /data/media_store
+signing_key_path: /data/signing.key
+macaroon_secret_key: omegaweb-dev-macaroon
+form_secret: omegaweb-dev-form
+
+# No other homeserver is talked to: the members of every space are decided in the application,
+# which knows the users of this server alone.
+federation_domain_whitelist: []
+trusted_key_servers: []
+
+# MAS signs everyone in, so Synapse takes no password and registers no one itself.
+matrix_authentication_service:
+    enabled: true
+    endpoint: http://mas:8080/
+    secret: omegaweb-dev-mas-shared-secret
+password_config:
+    enabled: false
+enable_registration: false
+
+# A user's name, picture and email are the ones they have in the application, which sets them.
+enable_set_displayname: false
+enable_set_avatar_url: false
+enable_3pid_changes: false
+
+encryption_enabled_by_default_for_room_type: "off"
+
+# The application, which acts on the homeserver as its bot and as the users, see appservice.yaml.
+app_service_config_files:
+    - /config/appservice.yaml
+
+# Only the application's bot creates spaces, and no room is encrypted, see synapse/omegaweb_rules.py.
+modules:
+    - module: omegaweb_rules.OmegawebRules
+      config:
+          space_creator: "@omegaweb:chat.localhost"

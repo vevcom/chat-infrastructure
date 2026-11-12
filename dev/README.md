@@ -1,0 +1,47 @@
+# Chat in development
+
+Synapse, MAS and Element Web, on plain http, with a Postgres of their own.
+
+```bash
+docker compose up -d
+./check.sh
+```
+
+| | Address |
+|---|---|
+| The client | http://chat.localhost:8090 |
+| Synapse | http://matrix.chat.localhost:8008 |
+| MAS | http://account.chat.localhost:8091 |
+
+Browsers resolve every name under `localhost` to the machine itself. The server name is
+`chat.localhost`, so a user is `@<username>:chat.localhost`.
+
+Nobody can sign in yet: MAS takes no password, and the provider it is to sign users in through,
+omegaweb-next, is not set up in `mas/config.yaml`. `check.sh` makes its users through MAS's admin
+api and acts as them through the application service.
+
+## What is fixed and what is made
+
+The values that are secrets in production are fixed here, in the config files: the tokens of the
+application service, the secret Synapse and MAS share, and the secret of the application as a
+client of MAS's admin api. The keys are not. The `keys` service makes Synapse's signing key and
+MAS's keys on the first start and keeps them on volumes, so a restart keeps every session.
+`docker compose down -v` clears the keys with everything else.
+
+## How an application connects
+
+- To Synapse at `http://synapse:8008` over the compose network, with the `as_token` of
+  `synapse/appservice.yaml`.
+- To MAS's admin api at `http://mas:8080`, as the client in `mas/config.yaml`, with the
+  `client_credentials` grant and the scope `urn:mas:admin`.
+
+MAS reaches the application's provider through `auth.localhost`, which the compose file points at
+the machine.
+
+## On an Apple M4
+
+The Synapse image crashed with "Illegal instruction" on an M4 Pro under Docker Desktop 25.0.2,
+which is older than the chip, as soon as it used OpenSSL. The compose file sets `OPENSSL_armcap=0`
+for Synapse, which stops OpenSSL from probing what the processor can do and so from using what the
+virtual machine does not carry. It does nothing on a processor that is not ARM. Whether a current
+Docker Desktop needs it has not been tried.
