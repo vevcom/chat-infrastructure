@@ -127,6 +127,20 @@ check "and is not shown it among the rooms of the space" false "$(listed "$priva
 check "though they are shown the room every member may enter" true "$(listed "$ofspace" "$ola")"
 check "and the one in the private room is shown it" true "$(listed "$private" "$kari")"
 
+# An invitation the application sent and no longer means: leaving as the invited takes it back.
+matrix POST "$in_private/invite" "{\"user_id\":\"$ola\"}" >/dev/null
+matrix POST "$in_private/leave" '{}' "$ola" >/dev/null
+check "the application takes back an invitation to a private room" M_FORBIDDEN "$(matrix POST "$in_private/join" '{}' "$ola" | jq -r .errcode)"
+
+# A room that is to go is closed first, so that no member of the space gets in while it is emptied.
+closing=$(matrix POST /_matrix/client/v3/createRoom "{\"name\":\"Stenges\",\"preset\":\"private_chat\",\"room_version\":\"12\",
+    \"initial_state\":[{\"type\":\"m.room.join_rules\",\"state_key\":\"\",
+        \"content\":{\"join_rule\":\"restricted\",\"allow\":[{\"type\":\"m.room_membership\",\"room_id\":\"$space\"}]}}],
+    \"power_level_content_override\":{\"events\":{},\"invite\":100,\"kick\":100,\"ban\":100,\"state_default\":100}}" | jq -r .room_id)
+matrix PUT "/_matrix/client/v3/rooms/$(enc "$closing")/state/m.room.join_rules" '{"join_rule":"invite"}' >/dev/null
+check "a room the application has closed lets no member of the space in" M_FORBIDDEN \
+    "$(matrix POST "/_matrix/client/v3/rooms/$(enc "$closing")/join" '{}' "$ola" | jq -r .errcode)"
+
 matrix POST "/_matrix/client/v3/rooms/$(enc "$space")/leave" '{}' "$kari" >/dev/null
 check "a user taken out of a space does not get back in" M_FORBIDDEN \
     "$(matrix POST "/_matrix/client/v3/rooms/$(enc "$space")/join" '{}' "$kari" | jq -r .errcode)"
