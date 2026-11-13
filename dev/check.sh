@@ -26,7 +26,7 @@ matrix() {
 }
 enc() { jq -rn --arg value "$1" '$value|@uri'; }
 
-for _ in $(seq 1 60); do curl -sf "$HS/health" >/dev/null && curl -sf "$MAS/health" >/dev/null && break; sleep 2; done
+for _ in $(seq 1 60); do curl -sf "$HS/health" >/dev/null && curl -sf "$MAS_ADMIN/health" >/dev/null && break; sleep 2; done
 
 # The application's two ways in: the application service token above, and MAS's admin api.
 admin=$(curl -s -u 0000000000000000000MEGAWEB:omegaweb-dev-mas-client-secret \
