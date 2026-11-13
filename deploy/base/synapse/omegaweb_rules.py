@@ -9,6 +9,11 @@ No room is encrypted. Clients are told so in the well-known file, and this holds
 that does not listen: the encryption a new room asks for is left out, and turning it on later is
 refused.
 
+In a room the bot is in, only the bot invites. The bot is in the spaces and in the rooms a space
+holds, and who is in those is decided in the application. The levels of such a room already keep
+its members from inviting, but the one who made a room outranks its levels, and this holds it for
+them too. A room the bot is not in, such as a direct message or a group room, is its members' own.
+
 Loaded from homeserver.yaml:
 
     modules:
@@ -27,6 +32,7 @@ from synapse.types import Requester, StateMap
 
 SPACE = "m.space"
 ENCRYPTION = "m.room.encryption"
+MEMBER = "m.room.member"
 
 
 class OmegawebRules:
@@ -63,4 +69,13 @@ class OmegawebRules:
     async def check_event_allowed(
         self, event: EventBase, state_events: StateMap[EventBase]
     ) -> tuple[bool, Optional[dict]]:
+        if self._is_invite_past_the_application(event, state_events):
+            raise SynapseError(403, "Members are managed in omegaweb", Codes.FORBIDDEN)
         return event.type != ENCRYPTION, None
+
+    def _is_invite_past_the_application(self, event: EventBase, state_events: StateMap[EventBase]) -> bool:
+        is_invite = event.type == MEMBER and event.content.get("membership") == "invite"
+        if not is_invite or event.sender == self._space_creator:
+            return False
+        bot = state_events.get((MEMBER, self._space_creator))
+        return bot is not None and bot.content.get("membership") == "join"

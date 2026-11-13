@@ -40,7 +40,9 @@ admins in the client. Direct messages and group rooms are anyone's to make.
 - **The rules.** `deploy/base/synapse/omegaweb_rules.py` is a Synapse module that refuses a space
   anyone but the bot creates, and keeps every room unencrypted: it leaves out the encryption a new
   room asks for and refuses it later. Clients are told so as well, in the well-known file Synapse
-  serves, so they do not offer it.
+  serves, so they do not offer it. It also refuses an invite from anyone but the bot into a room
+  the bot is in, which is to say a space or a room a space holds: who is in those is decided in
+  the application, and a room's maker outranks the levels that keep everyone else from inviting.
 - **Admins of a space.** The bot creates a space so that power level 50 adds and removes its rooms
   and nothing else. It gives the space's admins that level, and keeps inviting, removing and
   renaming to itself.

@@ -56,6 +56,16 @@ check "which is not encrypted, though it asked to be" 0 \
 check "and cannot be made so" M_FORBIDDEN \
     "$(matrix PUT "/_matrix/client/v3/rooms/$(enc "$room")/state/m.room.encryption" '{"algorithm":"m.megolm.v1.aes-sha2"}' "$kari" | jq -r .errcode)"
 
+check "a user lets another into a room of their own" '{}' \
+    "$(matrix POST "/_matrix/client/v3/rooms/$(enc "$room")/invite" "{\"user_id\":\"$ola\"}" "$kari" | jq -c .)"
+held=$(matrix POST /_matrix/client/v3/createRoom '{"name":"Held"}' "$kari" | jq -r .room_id)
+matrix POST "/_matrix/client/v3/rooms/$(enc "$held")/invite" "{\"user_id\":\"$bot\"}" "$kari" >/dev/null
+matrix POST "/_matrix/client/v3/rooms/$(enc "$held")/join" '{}' >/dev/null
+check "but not into a room the application is in, though they made it" M_FORBIDDEN \
+    "$(matrix POST "/_matrix/client/v3/rooms/$(enc "$held")/invite" "{\"user_id\":\"$ola\"}" "$kari" | jq -r .errcode)"
+check "where the application lets them in" '{}' \
+    "$(matrix POST "/_matrix/client/v3/rooms/$(enc "$held")/invite" "{\"user_id\":\"$ola\"}" | jq -c .)"
+
 matrix POST "/_matrix/client/v3/rooms/$(enc "$space")/invite" "{\"user_id\":\"$kari\"}" >/dev/null
 check "the application puts a user in a space" "$space" \
     "$(matrix POST "/_matrix/client/v3/rooms/$(enc "$space")/join" '{}' "$kari" | jq -r .room_id)"
