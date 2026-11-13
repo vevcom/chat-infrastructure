@@ -26,8 +26,8 @@ omega.ntnu.no.
 ## Who decides what
 
 The application, omegaweb-next, decides who has an account and what their name is, which spaces
-exist, who is in each and who administers it. The rooms of a space are made and arranged by its
-admins in the client. Direct messages and group rooms are anyone's to make.
+exist, which rooms each has, who is in it and who administers it. Nobody makes or arranges a room
+of a space in the client. Direct messages and group rooms are anyone's to make.
 
 - **Signing in.** MAS takes no password and registers no one. It signs users in through the
   application, which is an OpenID Connect provider, and makes the account at the first sign in.
@@ -41,11 +41,13 @@ admins in the client. Direct messages and group rooms are anyone's to make.
   anyone but the bot creates, and keeps every room unencrypted: it leaves out the encryption a new
   room asks for and refuses it later. Clients are told so as well, in the well-known file Synapse
   serves, so they do not offer it. It also refuses an invite from anyone but the bot into a room
-  the bot is in, which is to say a space or a room a space holds: who is in those is decided in
-  the application, and a room's maker outranks the levels that keep everyone else from inviting.
-- **Admins of a space.** The bot creates a space so that power level 50 adds and removes its rooms
-  and nothing else. It gives the space's admins that level, and keeps inviting, removing and
-  renaming to itself.
+  the bot is in, which is to say a space or a room of one: who is in those is decided in the
+  application.
+- **Spaces and their rooms.** The bot creates a space so that nothing in it is anyone else's to
+  change, the rooms it lists included. It makes the rooms of a space too, each with a join rule
+  that lets the members of the space in without an invite. It gives the space's admins power
+  level 50 in those rooms, which removes what others wrote and pins messages, and keeps inviting,
+  removing, renaming and the levels to itself.
 - **Profiles.** Synapse and MAS let no user change their name, picture or email. The application
   sets them through Synapse's admin api. The application service token is refused there, so it
   signs in to MAS's admin api as a client, and has MAS give a user of its own a token with

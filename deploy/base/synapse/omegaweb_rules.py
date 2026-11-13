@@ -9,10 +9,10 @@ No room is encrypted. Clients are told so in the well-known file, and this holds
 that does not listen: the encryption a new room asks for is left out, and turning it on later is
 refused.
 
-In a room the bot is in, only the bot invites. The bot is in the spaces and in the rooms a space
-holds, and who is in those is decided in the application. The levels of such a room already keep
-its members from inviting, but the one who made a room outranks its levels, and this holds it for
-them too. A room the bot is not in, such as a direct message or a group room, is its members' own.
+In a room the bot is in, only the bot invites. The bot is in the spaces and their rooms, which it
+makes, and who is in those is decided in the application. The levels of such a room already keep
+its members from inviting, and this holds it whatever the levels say. A room the bot is not in,
+such as a direct message or a group room, is its members' own.
 
 Loaded from homeserver.yaml:
 
