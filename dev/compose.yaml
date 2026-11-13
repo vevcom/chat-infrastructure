@@ -99,6 +99,9 @@ services:
             chat-keys:
                 condition: service_completed_successfully
         command: [server, --config, /config/config.yaml, --config, /site/site.yaml]
+        # MAS exits when its worker loses its lease on the queue, which a machine that sleeps makes
+        # it do. Production's Deployment starts it again, and so does this.
+        restart: unless-stopped
         # The provider MAS signs users in through is the application, published on the machine's
         # port 3000, see README.md.
         extra_hosts:
