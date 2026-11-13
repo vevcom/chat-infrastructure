@@ -42,8 +42,8 @@ are made on the first start and kept on volumes, so a restart keeps every sessio
 - To Synapse at `http://synapse:8008` over the compose network, with the `CHAT_AS_TOKEN` of
   `compose.yaml`.
 - To MAS's admin api at `http://mas:8081`, as the client in `mas/site.yaml`, with the
-  `client_credentials` grant and the scope `urn:mas:admin`. The token itself is asked for at
-  `http://mas:8080/oauth2/token`.
+  `client_credentials` grant and the scope `urn:mas:admin`. The token is asked for on the same
+  port, at `/oauth2/token`.
 - As the provider MAS signs users in through, see `upstream_oauth2` in `mas/site.yaml`. MAS is a
   client named by its host, `account.chat.localhost`, with PKCE and no secret, and takes the code
   back at `/upstream/callback/<the provider's id in the config>`. It asks for the scopes `openid`,

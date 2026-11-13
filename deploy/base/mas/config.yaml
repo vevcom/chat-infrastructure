@@ -17,10 +17,12 @@ http:
           binds:
               - address: "[::]:8080"
         # The admin api, which the application deactivates accounts through and gets its admin
-        # access to Synapse from. It is on a port of its own, which is never published.
+        # access to Synapse from, with the token endpoint it signs in to it at. It is on a port of
+        # its own, which is never published, so the application needs this one address alone.
         - name: internal
           resources:
               - name: adminapi
+              - name: oauth
               - name: health
           binds:
               - address: "[::]:8081"
