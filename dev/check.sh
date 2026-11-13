@@ -30,7 +30,7 @@ for _ in $(seq 1 60); do curl -sf "$HS/health" >/dev/null && curl -sf "$MAS/heal
 
 # The application's two ways in: the application service token above, and MAS's admin api.
 admin=$(curl -s -u 0000000000000000000MEGAWEB:omegaweb-dev-mas-client-secret \
-    -d 'grant_type=client_credentials&scope=urn:mas:admin' "$MAS/oauth2/token" | jq -r .access_token)
+    -d 'grant_type=client_credentials&scope=urn:mas:admin' "$MAS_ADMIN/oauth2/token" | jq -r .access_token)
 mas() { curl -s -X "$1" -H "Authorization: Bearer $admin" -H "Content-Type: application/json" ${3:+-d "$3"} "$MAS_ADMIN$2"; }
 
 bot="@omegaweb:$SERVER"
