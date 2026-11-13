@@ -109,6 +109,24 @@ check "or give anyone a level" M_FORBIDDEN \
     "$(matrix PUT "$in_room/state/m.room.power_levels" \
         "$(matrix GET "$in_room/state/m.room.power_levels" | jq -c --arg user "$ola" '.users[$user] = 50')" "$kari" | jq -r .errcode)"
 
+# A private room of the space, as the application makes it: for those it puts there alone.
+private=$(matrix POST /_matrix/client/v3/createRoom '{"name":"Styret","preset":"private_chat","room_version":"12",
+    "power_level_content_override":{"events":{"m.room.pinned_events":50},"redact":50,
+        "invite":100,"kick":100,"ban":100,"state_default":100}}' | jq -r .room_id)
+in_private="/_matrix/client/v3/rooms/$(enc "$private")"
+matrix PUT "$child/$(enc "$private")" "{\"via\":[\"$SERVER\"]}" >/dev/null
+matrix POST "$in_private/invite" "{\"user_id\":\"$kari\"}" >/dev/null
+check "the application puts a member of the space in a private room of it" "$private" \
+    "$(matrix POST "$in_private/join" '{}' "$kari" | jq -r .room_id)"
+check "a member it did not put there does not get in" M_FORBIDDEN "$(matrix POST "$in_private/join" '{}' "$ola" | jq -r .errcode)"
+# listed <room> <user>: whether the user is shown the room among the rooms of the space.
+listed() {
+    matrix GET "/_matrix/client/v1/rooms/$(enc "$space")/hierarchy" '' "$2" | jq --arg room "$1" '[.rooms[].room_id] | index($room) != null'
+}
+check "and is not shown it among the rooms of the space" false "$(listed "$private" "$ola")"
+check "though they are shown the room every member may enter" true "$(listed "$ofspace" "$ola")"
+check "and the one in the private room is shown it" true "$(listed "$private" "$kari")"
+
 matrix POST "/_matrix/client/v3/rooms/$(enc "$space")/leave" '{}' "$kari" >/dev/null
 check "a user taken out of a space does not get back in" M_FORBIDDEN \
     "$(matrix POST "/_matrix/client/v3/rooms/$(enc "$space")/join" '{}' "$kari" | jq -r .errcode)"

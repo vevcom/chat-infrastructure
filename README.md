@@ -45,7 +45,8 @@ of a space in the client. Direct messages and group rooms are anyone's to make.
   application.
 - **Spaces and their rooms.** The bot creates a space so that nothing in it is anyone else's to
   change, the rooms it lists included. It makes the rooms of a space too, each with a join rule
-  that lets the members of the space in without an invite. It gives the space's admins power
+  that lets the members of the space in without an invite. A private room has no such rule: only
+  those the bot puts there are in it, and nobody else is shown it. It gives the space's admins power
   level 50 in those rooms, which removes what others wrote and pins messages, and keeps inviting,
   removing, renaming and the levels to itself.
 - **Profiles.** Synapse and MAS let no user change their name, picture or email. The application
