@@ -56,6 +56,9 @@ services:
             # What the registration is rendered with, see deploy/base/synapse/appservice.yaml.
             CHAT_AS_TOKEN: omegaweb-dev-as-token
             CHAT_HS_TOKEN: omegaweb-dev-hs-token
+            # Where Synapse sends every event, which the including application sets to its own address.
+            # Left unset, Synapse sends none.
+            CHAT_APPSERVICE_URL: ${CHAT_APPSERVICE_URL:-}
             CHAT_SERVER_NAME: chat.localhost
         volumes:
             - ../deploy/base/synapse:/config:ro

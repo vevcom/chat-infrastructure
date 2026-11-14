@@ -48,6 +48,10 @@ are made on the first start and kept on volumes, so a restart keeps every sessio
   client named by its host, `account.chat.localhost`, with PKCE and no secret, and takes the code
   back at `/upstream/callback/<the provider's id in the config>`. It asks for the scopes `openid`,
   `profile` and `chat`, and makes the account by the claims `chat_localpart` and `name`.
+- As what Synapse sends every event to, when the application wants them. It sets
+  `CHAT_APPSERVICE_URL` to its own address on the compose network in the environment the stack is
+  started with, and Synapse sends there, signed with the `CHAT_HS_TOKEN` of `compose.yaml`. Left
+  unset, Synapse sends nothing.
 
 
 ## On an Apple M4
