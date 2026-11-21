@@ -33,6 +33,10 @@ of a space in the client. Direct messages and group rooms are anyone's to make.
   application, which is an OpenID Connect provider, and makes the account at the first sign in.
   The application says in the token what the user is called on the homeserver, as the claim
   `chat_localpart`, and their name. MAS is not told their email.
+- **The application's chat pages.** The application has chat pages of its own, which sign the
+  user's browser in to the homeserver as a client of MAS. That client is in MAS's config, with
+  PKCE and no secret, and MAS sends its users back to one address alone: `/chat/sign-in` on the
+  domain the application has the pages on. The browser asks Synapse where MAS is.
 - **The application service.** Synapse knows the application from a registration file, see
   `deploy/base/synapse/appservice.yaml`. With its token the application acts as its bot, and as
   any user of the homeserver. So it creates a space as the bot, invites a user to it and joins as
@@ -82,7 +86,8 @@ the application takes events, and makes the signing key the first time.
 - **`synapse-site`**, replaced with a `site.yaml` of the installation's: the server name, where
   clients reach Synapse, and the bot's user id for the module.
 - **`mas-site`**, replaced with a `site.yaml` of the installation's: where browsers reach MAS, the
-  server name, and the application's provider: its issuer, and MAS's own host as the client id.
+  server name, the domain the application has its chat pages on, and the application's provider:
+  its issuer, and MAS's own host as the client id.
 - **`element-config`**, replaced with a `config.json` naming the homeserver.
 - **`synapse-registration`**, with `CHAT_SERVER_NAME`, and `CHAT_APPSERVICE_URL` once the
   application takes events.

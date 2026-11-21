@@ -10,6 +10,8 @@ MAS=${MAS:-http://account.chat.localhost:8091}
 # MAS's admin api is on a port of its own, which development publishes here.
 MAS_ADMIN=${MAS_ADMIN:-http://localhost:8092}
 CLIENT=${CLIENT:-http://chat.localhost:8090}
+# Where the application has its chat pages, as dev/mas/site.yaml names it.
+CHAT_PAGES=${CHAT_PAGES:-http://omegaweb.localhost:3000}
 AS_TOKEN=omegaweb-dev-as-token
 SERVER=chat.localhost
 failed=0
@@ -170,5 +172,18 @@ check "and may register itself with MAS" true \
     "$(curl -s -H "Content-Type: application/json" -d '{"client_name":"check","client_uri":"http://chat.localhost:8090/",
         "redirect_uris":["http://chat.localhost:8090/"],"grant_types":["authorization_code","refresh_token"],"response_types":["code"],
         "token_endpoint_auth_method":"none","application_type":"web"}' "$MAS/oauth2/registration" | jq 'has("client_id")')"
+
+# The application's chat pages as a client of MAS. Nobody signs in without the application running,
+# so this goes as far as what MAS answers a browser they send to sign in.
+# asked <address to come back to>: the status of that answer, and where it sends the browser.
+asked() {
+    curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$MAS/authorize?response_type=code&response_mode=fragment\
+&client_id=000000000000000000MEGACHAT&redirect_uri=$(enc "$1")&state=check\
+&scope=$(enc "openid urn:matrix:client:api:* urn:matrix:client:device:CHECKDEVICE")\
+&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256" | sed 's/?.*//; s/ $//'
+}
+check "the homeserver tells a browser where MAS is" "$MAS/" "$(curl -s "$HS/_matrix/client/v1/auth_metadata" | jq -r .issuer)"
+check "MAS lets a browser the application's chat pages send go on to sign in" "303 $MAS/login" "$(asked "$CHAT_PAGES/chat/sign-in")"
+check "and sends it back to no other address of theirs" 400 "$(asked "$CHAT_PAGES/chat")"
 
 exit $failed
