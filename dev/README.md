@@ -41,9 +41,14 @@ are made on the first start and kept on volumes, so a restart keeps every sessio
 
 - To Synapse at `http://synapse:8008` over the compose network, with the `CHAT_AS_TOKEN` of
   `compose.yaml`.
-- To MAS's admin api at `http://mas:8081`, as the client in `mas/site.yaml`, with the
-  `client_credentials` grant and the scope `urn:mas:admin`. The token is asked for on the same
-  port, at `/oauth2/token`.
+- To MAS's admin api at `http://mas:8081`, as the client `0000000000000000000MEGAWEB` in
+  `mas/site.yaml`, with the `client_credentials` grant and the scope `urn:mas:admin`. The token is
+  asked for on the same port, at `/oauth2/token`.
+- As the client its chat pages sign a user's browser in through, `000000000000000000MEGACHAT` in
+  `mas/site.yaml`, with PKCE and no secret. The browser asks Synapse at
+  `http://matrix.chat.localhost:8008` where MAS is, and MAS sends it back to
+  `http://omegaweb.localhost:3000/chat/sign-in`, which is where omegaweb-next has that page when
+  it runs with the `sites.json` of its example.
 - As the provider MAS signs users in through, see `upstream_oauth2` in `mas/site.yaml`. MAS is a
   client named by its host, `account.chat.localhost`, with PKCE and no secret, and takes the code
   back at `/upstream/callback/<the provider's id in the config>`. It asks for the scopes `openid`,

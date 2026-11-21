@@ -7,12 +7,20 @@ http:
 matrix:
     homeserver: chat.localhost
 
-# The application as a client of MAS's admin api, which it signs in to with this secret and no
-# user.
 clients:
+    # The application as a client of MAS's admin api, which it signs in to with this secret and
+    # no user.
     - client_id: 0000000000000000000MEGAWEB
       client_auth_method: client_secret_basic
       client_secret_file: /secrets/mas-client-secret
+    # The application's chat pages, which sign the user's browser in: a client with PKCE and no
+    # secret, which MAS sends back to this one address, on the domain the application has them on.
+    - client_id: 000000000000000000MEGACHAT
+      client_auth_method: none
+      client_name: Omegaweb
+      client_uri: http://omegaweb.localhost:3000/
+      redirect_uris:
+          - http://omegaweb.localhost:3000/chat/sign-in
 
 policy:
     data:
