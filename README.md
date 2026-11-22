@@ -33,6 +33,17 @@ of a space in the client. Direct messages and group rooms are anyone's to make.
   application, which is an OpenID Connect provider, and makes the account at the first sign in.
   The application says in the token what the user is called on the homeserver, as the claim
   `chat_localpart`, and their name. MAS is not told their email.
+- **Signing out.** MAS keeps a session of its own in the browser, which a sign-out from the
+  application would otherwise outlive: the next person at that machine would be offered the
+  account. So the application tells MAS when a session of its provider ends, with a logout token
+  of OpenID Connect Back-Channel Logout that names the session, and MAS ends its own session in
+  that browser and every session of a client that was started in it, their devices included
+  (`on_backchannel_logout: logout_all`). A chat app that signed in through that browser is among
+  them: signing out of the application in a phone's browser also ends a chat app on that phone
+  that signed in through that browser, which is reasoned from how such an app signs in and was
+  not tried with a phone. What was started in the user's other browsers stays signed in. A
+  session MAS made before the application named its sessions is not reached: it lives until it
+  is ended in MAS.
 - **The application's chat pages.** The application has chat pages of its own, which sign the
   user's browser in to the homeserver as a client of MAS. That client is in MAS's config, with
   PKCE and no secret, and MAS sends its users back to one address alone: `/chat/sign-in` on the
@@ -71,7 +82,8 @@ of a space in the client. Direct messages and group rooms are anyone's to make.
   goes to Synapse, which answers where the homeserver is and that no room is encrypted. Synapse's
   host publishes what clients use, `/_matrix` and `/_synapse/client`, and not its admin api. MAS's
   host publishes the port browsers reach. MAS's admin api is on a port of its own, 8081, which no
-  ingress publishes.
+  ingress publishes. The application tells MAS of a sign-out on that port too, so MAS's pages for
+  browsers are served there as well as on the published port.
 
 Synapse and MAS each read two config files. The first is the same for every installation and is
 the one development runs on: `synapse/homeserver.yaml` and `mas/config.yaml`. The second,

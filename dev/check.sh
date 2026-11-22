@@ -163,6 +163,12 @@ check "the application sets a user's name" "Kari Nordmann" \
 
 check "MAS's admin api is not on the port browsers reach" 404 \
     "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $admin" "$MAS/api/admin/v1/users")"
+# Where the application tells MAS that a session of its provider has ended. MAS checks a token
+# against the provider's keys: with the application running it answers 400 to a token that is none,
+# and 500 without it. Either says the route is there, which a 404 says it is not.
+check "MAS takes word of a sign-out on the port the application reaches" served \
+    "$(curl -s -o /dev/null -w '%{http_code}' -d 'logout_token=none' \
+        "$MAS_ADMIN/upstream/backchannel-logout/000000000000000000000VEVEN" | sed -E 's/^(400|500)$/served/')"
 check "clients are told that no room is encrypted" true \
     "$(curl -s "$HS/.well-known/matrix/client" | jq '.["io.element.e2ee"].force_disable')"
 

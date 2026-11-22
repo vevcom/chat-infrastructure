@@ -53,6 +53,10 @@ are made on the first start and kept on volumes, so a restart keeps every sessio
   client named by its host, `account.chat.localhost`, with PKCE and no secret, and takes the code
   back at `/upstream/callback/<the provider's id in the config>`. It asks for the scopes `openid`,
   `profile` and `chat`, and makes the account by the claims `chat_localpart` and `name`.
+- As the provider that tells MAS when a session of its own has ended, with a logout token posted
+  to `http://mas:8081/upstream/backchannel-logout/<the provider's id in the config>`. The token
+  names the session by the `sid` its ID token had, and MAS ends what was started in that session.
+  A session MAS made from an ID token without a `sid` is not reached.
 - As what Synapse sends every event to, when the application wants them. It sets
   `CHAT_APPSERVICE_URL` to its own address on the compose network in the environment the stack is
   started with, and Synapse sends there, signed with the `CHAT_HS_TOKEN` of `compose.yaml`. Left
