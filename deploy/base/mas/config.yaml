@@ -19,10 +19,15 @@ http:
         # The admin api, which the application deactivates accounts through and gets its admin
         # access to Synapse from, with the token endpoint it signs in to it at. It is on a port of
         # its own, which is never published, so the application needs this one address alone.
+        # The application also tells MAS here that a session of its provider has ended, at
+        # /upstream/backchannel-logout. MAS has that route among its pages for browsers, `human`,
+        # and in no narrower resource, so those pages are on this port too: the sign in, the
+        # consent and the account pages. Whoever reaches this port reaches the admin api already.
         - name: internal
           resources:
               - name: adminapi
               - name: oauth
+              - name: human
               - name: health
           binds:
               - address: "[::]:8081"
