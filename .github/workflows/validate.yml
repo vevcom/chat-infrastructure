@@ -32,6 +32,14 @@ jobs:
     - name: check
       working-directory: dev
       run: ./check.sh
+    - name: start again with encryption on
+      working-directory: dev
+      run: |
+        docker compose down -v
+        docker compose -f compose.yaml -f compose.encrypted.yaml up -d
+    - name: check
+      working-directory: dev
+      run: ./check.sh encrypted
     - name: logs
       if: failure()
       working-directory: dev

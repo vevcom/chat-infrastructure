@@ -1,0 +1,11 @@
+# Read after site.yaml by compose.encrypted.yaml, and replaces what it names: the chat with
+# encryption on. A room outside the spaces is always encrypted and a room of a space when the
+# application says so, see omegaweb_rules.py, and clients are no longer told to leave it off.
+modules:
+    - module: omegaweb_rules.OmegawebRules
+      config:
+          space_creator: "@omegaweb:chat.localhost"
+          encryption: true
+extra_well_known_client_content:
+    io.element.e2ee:
+        default: true
