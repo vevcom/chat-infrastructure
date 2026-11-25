@@ -16,6 +16,14 @@ docker compose up -d
 | MAS | http://account.chat.localhost:8091 |
 | MAS's admin api | http://localhost:8092 |
 
+Encryption is off, as in production. To run with it on, see "Turning encryption on" in the root
+README:
+
+```bash
+docker compose -f compose.yaml -f compose.encrypted.yaml up -d
+./check.sh encrypted
+```
+
 Browsers resolve every name under `localhost` to the machine itself. The server name is
 `chat.localhost`, so a user is `@<username>:chat.localhost`.
 

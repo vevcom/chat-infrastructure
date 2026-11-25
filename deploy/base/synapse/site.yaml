@@ -7,7 +7,9 @@ server_name: chat.placeholder.invalid
 public_baseurl: https://matrix.placeholder.invalid/
 
 # Only the application's bot creates spaces, and no room is encrypted, see omegaweb_rules.py.
+# "Turning encryption on" in README.md says what is set here to change that.
 modules:
     - module: omegaweb_rules.OmegawebRules
       config:
           space_creator: "@omegaweb:chat.placeholder.invalid"
+          encryption: false

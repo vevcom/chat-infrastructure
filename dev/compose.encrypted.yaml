@@ -1,0 +1,14 @@
+# The chat for development with encryption on, which it is not yet in production: Synapse reads
+# synapse/encrypted.yaml after the two files it always reads. Given after compose.yaml:
+#
+#     docker compose -f compose.yaml -f compose.encrypted.yaml up -d
+services:
+    synapse:
+        command:
+            - run
+            - --config-path
+            - /config/homeserver.yaml
+            - --config-path
+            - /site/site.yaml
+            - --config-path
+            - /site/encrypted.yaml

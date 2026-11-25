@@ -5,7 +5,9 @@ server_name: chat.localhost
 public_baseurl: http://matrix.chat.localhost:8008/
 
 # Only the application's bot creates spaces, and no room is encrypted, see omegaweb_rules.py.
+# encrypted.yaml is this with encryption on.
 modules:
     - module: omegaweb_rules.OmegawebRules
       config:
           space_creator: "@omegaweb:chat.localhost"
+          encryption: false

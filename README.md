@@ -43,6 +43,17 @@ of a space in the client. Direct messages and group rooms are anyone's to make.
   serves, so they do not offer it. It also refuses an invite from anyone but the bot into a room
   the bot is in, which is to say a space or a room of one: who is in those is decided in the
   application.
+- **Encryption.** Off, until an installation turns it on, see "Turning encryption on". Then a
+  direct message or a group room is always encrypted: the module makes every room a user creates
+  so, whether the client asks for it or not. A room of a space is encrypted when the application
+  says so: the bot asks for it as it makes the room or sets it later, and the module refuses it
+  from anyone else in a room the bot is in. A room that is encrypted stays so: the module refuses
+  to have its encryption set again or removed, from the bot too, and refuses a message or a
+  sticker in it that is not encrypted. A room the bot is not in that is not encrypted takes no
+  new members until it is: Synapse keeps a room whose creation failed halfway, with its creator
+  in it and no encryption, and nobody is invited to such a room or joins it. The application
+  still hears that someone wrote in an encrypted room, where and when, and reads what the event
+  carries beside the encrypted part, such as whom it mentions when the client writes that there.
 - **Spaces and their rooms.** The bot creates a space so that nothing in it is anyone else's to
   change, the rooms it lists included. It makes the rooms of a space too, each with a join rule
   that lets the members of the space in without an invite. A private room has no such rule: only
@@ -54,7 +65,8 @@ of a space in the client. Direct messages and group rooms are anyone's to make.
   signs in to MAS's admin api as a client, and has MAS give a user of its own a token with
   Synapse's admin scope.
 
-`dev/check.sh` checks every line above against a running stack.
+`dev/check.sh` checks every line above against a running stack, and `dev/check.sh encrypted`
+against one with encryption on.
 
 ## What deploy/base is
 
@@ -80,7 +92,7 @@ the application takes events, and makes the signing key the first time.
 ## What an overlay fills in
 
 - **`synapse-site`**, replaced with a `site.yaml` of the installation's: the server name, where
-  clients reach Synapse, and the bot's user id for the module.
+  clients reach Synapse, the bot's user id for the module, and whether rooms are encrypted.
 - **`mas-site`**, replaced with a `site.yaml` of the installation's: where browsers reach MAS, the
   server name, and the application's provider: its issuer, and MAS's own host as the client id.
 - **`element-config`**, replaced with a `config.json` naming the homeserver.
@@ -100,6 +112,40 @@ the application takes events, and makes the signing key the first time.
 | `CHAT_MAS_CLIENT_SECRET` | The application's secret as a client of MAS's admin api, which the application has too |
 
 The database's password is not among them: CloudNativePG makes it.
+
+## Turning encryption on
+
+Two settings in the installation's `site.yaml` for Synapse, which go together:
+
+```yaml
+modules:
+    - module: omegaweb_rules.OmegawebRules
+      config:
+          space_creator: "@omegaweb:chat.example.org"
+          encryption: true
+extra_well_known_client_content:
+    io.element.e2ee:
+        default: true
+```
+
+`encryption` is the module's switch, which is off when it is not there. The second replaces what
+`homeserver.yaml` tells clients, that no room is encrypted, so Element asks for encryption in the
+rooms it makes. Development's are in `dev/synapse/encrypted.yaml`.
+
+It is turned on once the application's own client reads encrypted rooms, and not before: a client
+without encryption makes a direct message, which the module encrypts, and can then neither write
+in it nor read it. The application itself writes in no room, as the bot or as a user, and must
+not start to in one that may be encrypted. It is not turned off again. A room that was encrypted
+meanwhile stays so, and the module would only keep new ones from it.
+
+A direct message or group room made before it was turned on is not encrypted by this. Those in it
+go on writing, and it takes no new members until one who has the level for it turns encryption
+on, in a client that offers it: by default that is the one who made the room. One the bot is in
+is the bot's to let members into and to encrypt, as a room of a space is.
+
+A room Synapse makes itself as anyone but the bot, such as the one for server notices or the one
+its admin api moves the members of a closed room to, would be encrypted like any other and take
+no message that is not. None is set up here.
 
 ## The server name
 

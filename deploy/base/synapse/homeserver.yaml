@@ -48,7 +48,8 @@ enable_3pid_changes: false
 
 # No room is encrypted. Synapse turns it on for none, the module refuses it, see
 # omegaweb_rules.py, and a client is told so in the well-known file Synapse serves, so it does not
-# offer it.
+# offer it. An installation that turns encryption on replaces the last of these in its site.yaml,
+# see README.md. The first stays: which rooms are encrypted is then the module's to say.
 encryption_enabled_by_default_for_room_type: "off"
 extra_well_known_client_content:
     io.element.e2ee:
